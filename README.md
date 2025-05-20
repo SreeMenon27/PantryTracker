@@ -11,20 +11,6 @@
 - 💾 Data stored in JSON for persistence
 - 🧠 Categorized and unit-typed for easy input
 
-## 📂 Folder Structure
-
-PantryTracker/
-├── Data/
-│ └── pantry.json
-├── Pantry/
-│ └── pantry.py
-├── Utils/
-│ ├── init.py
-│ └── config.py
-├── main.py
-└── README.md
-
-
 ## 📌 Technologies Used
 
 - Python 3.x
