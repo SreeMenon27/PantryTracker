@@ -1,149 +1,153 @@
-from Utils.config import CATEGORIES, UNITS
 import os
-import time
 import json
+import time
+from Utils.config import CATEGORIES, UNITS
 
 class PantryItem:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # path to /Pantry
-    filepath = os.path.normpath(os.path.join(BASE_DIR, '..', 'Data', 'pantry.json'))
+    def __init__(self, name, category, quantity, unit, date_added, last_updated=None):
+        self.name = name
+        self.category = category
+        self.quantity = quantity  # Triggers @property setter
+        self.unit = unit
+        self.date_added = date_added
+        self.last_updated = last_updated or date_added
+
+    @property
+    def quantity(self):
+        return self._quantity
+
+    @quantity.setter
+    def quantity(self, value):
+        val = float(value)
+        if val < 0:
+            raise ValueError("❌ Quantity cannot be negative.")
+        self._quantity = val
+        self.last_updated = time.strftime("%Y-%m-%d")
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "category": self.category,
+            "quantity": self.quantity,
+            "unit": self.unit,
+            "date_added": self.date_added,
+            "last_updated": self.last_updated
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return PantryItem(
+            name=data["name"],
+            category=data["category"],
+            quantity=data["quantity"],
+            unit=data["unit"],
+            date_added=data["date_added"],
+            last_updated=data.get("last_updated")
+        )
+
+
+class PantryManager:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    FILE_PATH = os.path.normpath(os.path.join(BASE_DIR, '..', 'Data', 'pantry.json'))
 
     def __init__(self):
-        self.name = ""
-        self.category = ""
-        self.quantity : 0
-        self.unit = ""
-        self._load_items()
-
-
-    def _get_category_list(self):
-        categories = CATEGORIES
-        print("=" * 50)
-        print("\n Choose category: ")
-        for key, val in categories.items():
-            print(f"{key}. {val}")
-
-        while True:
-            selected_category = input("\n Select category: ")
-            if selected_category in categories:
-                return categories[selected_category]
-            else:
-                print("❌ Invalid choice. Please select a valid number from the list.")
-
-
-
-    def _get_unit_list(self):
-        units = UNITS
-        print("-"*50)
-        print("\n Choose unit")        
-        for key,val in units.items():
-            print(f"{key}. {val}")
-
-        while True:
-            selected_unit = input("\n Select unit: ")
-            if selected_unit in units:
-                return units[selected_unit]
-            else:
-                print("❌ Invalid choice. Please select a valid number from the list.")            
-
-        
-    def _validate_quantity(self):
-        quantity = input("Enter quantity: ")
-        try:
-            return float(quantity) if '.' else int(quantity)
-        except ValueError:
-            print("❌ Invalid input. Please enter a valid number.")
-
-
-    def _save_item(self):
-        ## Write to JSON file
-        try:
-            with open(self.filepath,"w+") as file:
-                json.dump(self.items, file, indent=4)
-
-            print("✅ Transactions saved successfully.")
-
-        except FileNotFoundError:
-            print("❌ File path not found.")
-        except Exception as e:
-            print(f"❌ An error occurred while saving transactions: {e}")
-      
-
-    def add_item(self):
-        record = {}
-        self.name = input("Enter the item name : ")
-        self.category = self._get_category_list()
-        self.quanity = self._validate_quantity()
-        self.unit = self._get_unit_list()
-        self.date_added = time.strftime("%Y-%m-%d")
-
-        # create the item dictionary
-        record = {
-            "name": self.name,
-            "category" : self.category,
-            "quantity" : self.quanity,
-            "unit" : self.unit,
-            "date_added" : self.date_added
-        }
-        self.items.append(record)
-        
-        # Saving the record in the json file
-        self._save_item()
-
+        self.items = self._load_items()
 
     def _load_items(self):
         try:
-            if os.path.exists(self.filepath) and os.path.getsize(self.filepath) > 0:
-                with open(self.filepath,"r") as file:
-                    content = json.load(file)
-                    self.items = content
-            else:
-                self.items = []
+            if os.path.exists(self.FILE_PATH) and os.path.getsize(self.FILE_PATH) > 0:
+                with open(self.FILE_PATH, "r") as file:
+                    data = json.load(file)
+                    return [PantryItem.from_dict(item) for item in data]
         except json.JSONDecodeError:
-            print("❌ Error: records.json contains invalid JSON.")
+            print("❌ Error: pantry.json contains invalid JSON.")
+        return []
 
-    
+    def _save_items(self):
+        try:
+            with open(self.FILE_PATH, "w") as file:
+                json.dump([item.to_dict() for item in self.items], file, indent=4)
+            print("✅ Pantry items saved successfully.")
+        except Exception as e:
+            print(f"❌ Failed to save pantry items: {e}")
+
+    def add_item(self):
+        print("\n📥 Add New Pantry Item")
+        print("-"*30)
+        name = input("Enter item name: ")
+        category = self._choose_from_dict("category", CATEGORIES)
+        quantity = self._validate_quantity()
+        unit = self._choose_from_dict("unit", UNITS)
+        date_added = time.strftime("%Y-%m-%d")
+
+        item = PantryItem(name, category, quantity, unit, date_added)
+        self.items.append(item)
+        self._save_items()
+
     def view_items(self):
-        self._load_items()  # Always load the latest items first
-
-        if self.items:
-            print("\n📦 Current Pantry Items:")
-            print("-" * 100)
-            print(f"{'No.':<4} {'Name':<25} {'Category':<25} {'Quantity':<15} {'Unit':<15} {'Date Added':<10}")
-            print("-" * 100)
-            for i, item in enumerate(self.items, start=1):
-                print(f"{i:<4} {item.get('name', ''):<25} {item.get('category', ''):<25} "
-                    f"{item.get('quantity', 0):<15.2f} {item.get('unit', ''):<15} {item.get('date_added', ''):<10}")
-            print("-" * 100)
-        else:
-            print("🟡 No items found in pantry.")
-
-
-    
-    def delete_item(self):
-        self._load_items()  # ✅ Fix: Add parentheses
-
-        # Assuming you have or will create a view_items() method
-        self.view_items()
-
         if not self.items:
-            print("🟡 Pantry is empty. Nothing to delete.")
+            print("\n🟡 No items in pantry.")
             return
 
+        print("\n📦 Pantry Items:")
+        print("-" * 105)
+        print(f"{'No.':<4} {'Name':<25} {'Category':<20} {'Quantity':<10} {'Unit':<10} {'Date Added':<15} {'Last Updated':<15}")
+        print("-" * 105)
+
+        for i, item in enumerate(self.items, start=1):
+            print(f"{i:<4} {item.name:<25} {item.category:<20} {item.quantity:<10.2f} {item.unit:<10} "
+                  f"{item.date_added:<15} {item.last_updated:<15}")
+        print("-" * 105)
+
+    def update_item(self):
+        self.view_items()
+        if not self.items:
+            return
+
+        try:
+            idx = int(input("\n✏️  Enter item number to update quantity: ")) - 1
+            if 0 <= idx < len(self.items):
+                new_qty = self._validate_quantity()
+                self.items[idx].quantity = new_qty
+                self._save_items()
+                print(f"✅ Quantity updated for '{self.items[idx].name}'.")
+            else:
+                print("❌ Invalid item number.")
+        except ValueError:
+            print("❌ Invalid input. Please enter a number.")
+
+    def delete_item(self):
+        self.view_items()
+        if not self.items:
+            return
+
+        try:
+            idx = int(input("\n🗑️  Enter item number to delete: ")) - 1
+            if 0 <= idx < len(self.items):
+                deleted = self.items.pop(idx)
+                self._save_items()
+                print(f"✅ Deleted '{deleted.name}' from pantry.")
+            else:
+                print("❌ Invalid item number.")
+        except ValueError:
+            print("❌ Invalid input. Please enter a number.")
+
+    def _choose_from_dict(self, label, options):
+        print(f"\nChoose {label}:")
+        for key, val in options.items():
+            print(f"{key}. {val}")
         while True:
-            try:            
-                item_no = int(input("\n🗑️  Enter the item number to delete: "))
-                if 1 <= item_no <= len(self.items):
-                    deleted = self.items.pop(item_no - 1)
-                    self._save_item()
-                    print(f"✅ '{deleted['name']}' has been removed from your pantry.")
-                    break  # ✅ Exit loop after successful deletion
-                else:
-                    print("❌ Invalid item number.")
+            choice = input(f"Enter {label} number: ")
+            if choice in options:
+                return options[choice]
+            print(f"❌ Invalid {label}. Try again.")
+
+    def _validate_quantity(self):
+        while True:
+            try:
+                qty = float(input("Enter quantity: "))
+                if qty < 0:
+                    raise ValueError
+                return qty
             except ValueError:
-                print("❌ Please enter a valid number.")
-
-
-
-
-
-        
+                print("❌ Please enter a valid non-negative number.")

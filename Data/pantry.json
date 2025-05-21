@@ -4,6 +4,31 @@
         "category": "Baking Essentials",
         "quantity": 1.0,
         "unit": "gallon",
-        "date_added": "2025-05-19"
+        "date_added": "2025-05-19",
+        "last_updated": "2025-05-19"
+    },
+    {
+        "name": "Rice",
+        "category": "Grains & Pasta",
+        "quantity": 10.0,
+        "unit": "lb",
+        "date_added": "2025-05-19",
+        "last_updated": "2025-05-19"
+    },
+    {
+        "name": "flour",
+        "category": "Baking Essentials",
+        "quantity": 2.0,
+        "unit": "lb",
+        "date_added": "2025-05-21",
+        "last_updated": "2025-05-21"
+    },
+    {
+        "name": "Eggs",
+        "category": "Dairy & Eggs",
+        "quantity": 4.0,
+        "unit": "cartons",
+        "date_added": "2025-05-21",
+        "last_updated": "2025-05-21"
     }
 ]
